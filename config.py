@@ -28,13 +28,6 @@ class Config:
         "index_name": os.getenv("AZURE_SEARCH_INDEX")
     }
     
-    # Server Configuration
-    SERVER = {
-        "host": os.getenv("SERVER_HOST"),
-        "port": int(os.getenv("SERVER_PORT")),
-        "debug": os.getenv("DEBUG").lower() == "true"
-    }
-    
     # Agent Configuration
     AGENT = {
         "memory_window": int(os.getenv("MEMORY_WINDOW")),
