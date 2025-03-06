@@ -200,6 +200,7 @@ class MultiAgent:
         try:
             self.socketio.run(
                 self.app,
+                host="0.0.0.0",
                 port=port,
                 debug=False
             )
