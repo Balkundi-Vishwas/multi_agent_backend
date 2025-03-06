@@ -36,7 +36,7 @@ class PromptLoader:
         return content
     
     @staticmethod
-    def get_prompt_paths(base_dir: str = r'C:\Projects\multi_agent_backend\prompts') -> Dict[str, str]:
+    def get_prompt_paths(base_dir: str = None) -> Dict[str, str]:
         """
         Get paths to all prompt files.
         
@@ -46,6 +46,8 @@ class PromptLoader:
         Returns:
             Dict[str, str]: Dictionary mapping agent names to prompt file paths
         """
+        if base_dir is None:
+            base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'prompts')
         return {
             'child_agent1': os.path.join(base_dir, 'child_agent1.prompty'),
             'master_agent': os.path.join(base_dir, 'master_agent.prompty'),
