@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from typing import Dict, Callable, TypedDict, Literal
 from langchain_core.language_models.chat_models import BaseChatModel
-from flask_socketio import SocketIO, emit
+# from flask_socketio import SocketIO, emit
 from langchain_openai import AzureChatOpenAI
 from langgraph.graph import StateGraph, START, END
 from prompt_loader import PromptLoader
@@ -22,6 +22,7 @@ class AgentState(TypedDict):
     query: str
     refined_query: str
     next: str
+    complete_response: str
 
 class MultiAgent:
     """Main agent orchestrator managing the routing and processing of queries."""
@@ -40,17 +41,18 @@ class MultiAgent:
             self.llm = self._initialize_llm()
             self.app = Flask(__name__)
             CORS(self.app)
-            self.socketio = SocketIO(self.app, cors_allowed_origins="*")
-            self.chatbot = Chatbot(self.socketio)
+            # self.socketio = SocketIO(self.app, cors_allowed_origins="*")
+            self.chatbot = Chatbot()
             self.child_agent1 = ChildAgent1(self.chatbot)
             self.graph = self._build_graph()
             self.initial_query_state = {
                 "query": "",
                 "refined_query": "",
-                "next": START
+                "next": START,
+                "complete_response": ""
             }
             print("main agent initlized")
-            self._register_socket_events()
+            self._register_routes()
         except Exception as e:
             logger.error(f"Failed to initialize MultiAgent: {str(e)}")
             raise
@@ -68,13 +70,13 @@ class MultiAgent:
                 max_retries=Config.AGENT["max_retries"],
                 azure_endpoint=Config.AZURE_OPENAI["azure_endpoint"],
                 api_key=Config.AZURE_OPENAI["api_key"],
-                streaming=True
+                streaming=False
             )
         except Exception as e:
             logger.error(f"Failed to initialize LLM: {str(e)}")
             raise
 
-    def _register_socket_events(self) -> None:
+    def _register_routes(self) -> None:
         """Register socket event handlers."""
         # @self.socketio.on('data')
         # def process_query(data) -> None:
@@ -99,11 +101,22 @@ class MultiAgent:
             try:
                 current_state = self.initial_query_state.copy()
                 current_state["query"] = query
+
+                final_state = None
                 for state in self.graph.stream(current_state):
-                    pass
-                return jsonify({
-                "message": "query answered successfully",
-            })
+                    final_state = state
+
+                print(final_state)
+                # print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+                if final_state and 'child_bot1' in final_state and 'complete_response' in final_state['child_bot1']:
+                    response = final_state['child_bot1']['complete_response']
+                    return jsonify({
+                        "message": "Query processed successfully",
+                        "response": response
+                    })
+                else:
+                    return jsonify({"error": "No response generated"}), 500
+                
             except Exception as e:
                 return jsonify({"error": str(e)}), 500 
 
@@ -150,6 +163,7 @@ class MultiAgent:
             current_query = state["query"]
             format_template = "Original query: '{query}'"
             refined_query = self.llm.invoke(self.refiner_prompt + "\n" + format_template.format(query=current_query))
+            print(state)
             return {"refined_query": refined_query.content}
         except Exception as e:
             logger.error(f"Error in refiner agent: {str(e)}")
@@ -159,10 +173,14 @@ class MultiAgent:
         """Create the supervisor agent for routing."""
         def supervisor_node(state: AgentState) -> AgentState:
             try:
+                print("********************************************************")
                 routing_prompt = self.master_prompt.format(
                     query=state['refined_query']
                 )
+                print(state['refined_query'])
                 routing_response = self.llm.with_structured_output(Router).invoke(routing_prompt)
+                print(routing_response)
+                print("***********************************************************")
                 return {"next": routing_response["next"]}
             except Exception as e:
                 logger.error(f"Error in supervisor agent: {str(e)}")
@@ -198,9 +216,7 @@ class MultiAgent:
     def run(self, port: int = 5001, debug: bool = True) -> None:
         """Run the multi-agent system."""
         try:
-            self.socketio.run(
-                self.app,
-                host="0.0.0.0",
+            self.app.run(
                 port=port,
                 debug=False
             )

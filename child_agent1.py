@@ -89,7 +89,12 @@ class ChildAgent1(BaseAgent):
                 raise ValueError("No query found in state")
 
             context = self.find_match(query=query)
-            self.chatbot.response_stream(context=context, query=query, system_promt= self.system_prompt)
+            # self.chatbot.response_stream(context=context, query=query, system_promt= self.system_prompt)
+            state['complete_response'] = self.chatbot.generate_response(
+                context=context, 
+                query=query, 
+                system_prompt=self.system_prompt
+            )
             return state
             
         except Exception as e:

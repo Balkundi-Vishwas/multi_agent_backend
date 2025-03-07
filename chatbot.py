@@ -9,7 +9,7 @@ from langchain.prompts import (
     MessagesPlaceholder
 )
 import time
-from flask_socketio import SocketIO, emit
+# from flask_socketio import SocketIO, emit
 from logging import getLogger
 from config import Config
 
@@ -18,7 +18,7 @@ logger = getLogger(__name__)
 class Chatbot:
     """Handles chat interactions using Azure OpenAI."""
     
-    def __init__(self, socketio):
+    def __init__(self):
         """
         Initialize Chatbot with configurable memory window.
         
@@ -26,7 +26,7 @@ class Chatbot:
             memory_window (int): Number of previous conversations to remember
         """
         self.config = Config.AZURE_OPENAI
-        self.socketio = socketio
+        # self.socketio = socketio
         try:
             self.memory = ConversationBufferWindowMemory(k=1, return_messages=True)
             self._initialize_llm(deployment=self.config["deployment_gpt_4o_mini"],version=self.config["api_version_4o"])
@@ -45,7 +45,7 @@ class Chatbot:
                 max_retries=Config.AGENT["max_retries"],
                 azure_endpoint=self.config["azure_endpoint"],
                 api_key=self.config["api_key"],
-                streaming=True
+                streaming=False
             )
             print("****************************************************")
             print("chatbot initlized with, deployment :",deployment)
@@ -85,20 +85,25 @@ class Chatbot:
             logger.error(f"Failed to setup conversation: {str(e)}")
             return None
         
-    def response_stream(self, context, query, system_promt):
+    def generate_response(self, context, query, system_prompt):
 
         try:
-            chain = self._setup_conversation(system_promt)
-            self.socketio.emit('data', {'char': "response from: child_bot1, "})
+            chain = self._setup_conversation(system_prompt)
+            # self.socketio.emit('data', {'char': "response from: child_bot1, "})
+            prefix = "response from: child_bot1, "
                     
-            for chunk in chain.predict(input=f"Context:\n {context} \n\n Query:\n{query}"):
-                self.socketio.emit('data', {'char': chunk})
-                time.sleep(0.01)
+            # for chunk in chain.predict(input=f"Context:\n {context} \n\n Query:\n{query}"):
+            #     self.socketio.emit('data', {'char': chunk})
+            #     time.sleep(0.01)
                 
-            self.socketio.emit('stream_complete')
+            # self.socketio.emit('stream_complete')
+            response = chain.predict(input=f"Context:\n {context} \n\n Query:\n{query}")
+            # print(response)
+            # Return the complete response with the prefix
+            return prefix + response
         except:
-            emit('data', {'char': "An error occurred while processing your query."})
-            emit('stream_complete')
+            logger.error(f"Error generating response: {str(e)}")
+            return "An error occurred while processing your query."
 
     def reset_memory(self) -> None:
         """Reset the conversation memory."""
