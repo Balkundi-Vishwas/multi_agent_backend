@@ -216,7 +216,8 @@ class MultiAgent:
     def run(self, port: int = 5001, debug: bool = True) -> None:
         """Run the multi-agent system."""
         try:
-            self.app.run(
+            app = self.app
+            app.run(
                 port=port,
                 debug=False
             )
