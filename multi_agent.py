@@ -213,25 +213,36 @@ class MultiAgent:
             logger.error(f"Error building graph: {str(e)}")
             raise
 
-    def run(self, port: int = 5001, debug: bool = True) -> None:
+    # def run(self, port: int = 5001, debug: bool = True) -> None:
+    #     """Run the multi-agent system."""
+    #     try:
+    #         app = self.app
+    #         app.run(
+    #             port=port,
+    #             debug=False
+    #         )
+    #     except Exception as e:
+    #         logger.error(f"Error running server: {str(e)}")
+    #         raise
+
+    def run(self) -> None:
         """Run the multi-agent system."""
         try:
-            app = self.app
-            app.run(
-                port=port,
-                debug=False
-            )
+            # port = int(os.environ.get("PORT", 5000))  # Get PORT from environment
+            self.app.run(host="0.0.0.0", port=5001, debug=False)
         except Exception as e:
             logger.error(f"Error running server: {str(e)}")
             raise
 
-def main():
-    try:
-        app = MultiAgent()
-        app.run()
-    except Exception as e:
-        logger.error(f"Error running server: {str(e)}")
-        raise
+multi_agent_app = MultiAgent()
+app = multi_agent_app.app  
+# def main():
+#     try:
+#         app = MultiAgent()
+#         app.run()
+#     except Exception as e:
+#         logger.error(f"Error running server: {str(e)}")
+#         raise
 
 if __name__ == '__main__':
-    main()
+    multi_agent_app.run()
